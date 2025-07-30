@@ -37,5 +37,5 @@ app.use('/api/folders', folderRoutes)
 
 const PORT = process.env.PORT || 5000
 app.listen(PORT, () => {
-  console.log(`✅ Server is running at: https://document-r72p.onrender.com`)
+  console.log(`✅ Server is running at: https://document-1-se6b.onrender.com`)
 })
