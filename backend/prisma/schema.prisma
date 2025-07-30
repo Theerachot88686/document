@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum FolderStatus {
+  SENT      // ส่งแฟ้ม
+  RECEIVED  // รับแฟ้ม
+  COMPLETED // เสร็จสิ้น
+  ARCHIVED  // เก็บประวัติ
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  username  String   @unique
+  password  String
+  role      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  createdDocs    Document[] @relation("CreatedByUser")    // ผู้ใช้สร้างเอกสาร
+  receivedDocs   Document[] @relation("ReceivedByUser")   // ผู้ใช้เป็นผู้รับเอกสาร
+  createdFolders Folder[]                                  // ผู้ใช้สร้างแฟ้ม
+}
+
+model Document {
+  id          Int      @id @default(autoincrement())
+  docNumber   String   @unique
+  createdAt   DateTime @default(now())
+  agencyType  String
+  department  String
+  subject     String
+  sender      String
+  description String?
+
+  createdById Int
+  createdBy   User @relation("CreatedByUser", fields: [createdById], references: [id])
+
+  receiverId Int?
+  receiver   User? @relation("ReceivedByUser", fields: [receiverId], references: [id])
+
+  folderId Int?
+  folder   Folder? @relation("FolderDocuments", fields: [folderId], references: [id], map: "Document_folderId_fkey")
+}
+
+model Folder {
+  id          Int          @id @default(autoincrement())
+  title       String
+  qrToken     String
+  status      FolderStatus @default(SENT)  // default เป็น SENT
+  createdAt   DateTime     @default(now())
+  createdById Int
+
+  createdBy  User               @relation(fields: [createdById], references: [id])
+  documents  Document[]         @relation("FolderDocuments")
+  statusLogs FolderStatusLog[] // เก็บประวัติสถานะแฟ้ม
+}
+
+model FolderStatusLog {
+  id        Int          @id @default(autoincrement())
+  folderId  Int
+  status    FolderStatus
+  startedAt DateTime     @default(now())
+  endedAt   DateTime?
+
+  folder    Folder       @relation(fields: [folderId], references: [id])
+
+  @@index([folderId, status])
+}
