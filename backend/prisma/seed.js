@@ -4,10 +4,8 @@ import bcrypt from 'bcrypt'
 const prisma = new PrismaClient()
 
 async function main() {
-  // เข้ารหัสรหัสผ่าน
   const hashedPassword = await bcrypt.hash('123456', 10)
 
-  // สร้างผู้ใช้ admin
   const user1 = await prisma.user.upsert({
     where: { username: 'admin' },
     update: {
@@ -22,7 +20,6 @@ async function main() {
     },
   })
 
-  // สร้างผู้ใช้ทั่วไป
   const user2 = await prisma.user.upsert({
     where: { username: 'user' },
     update: {
@@ -37,7 +34,6 @@ async function main() {
     },
   })
 
-  // สร้างแฟ้ม
   const folder1 = await prisma.folder.create({
     data: {
       title: 'แฟ้มเอกสารสำคัญ',
@@ -47,17 +43,18 @@ async function main() {
     },
   })
 
-  // บันทึกสถานะเริ่มต้นของแฟ้มใน FolderStatusLog
   await prisma.folderStatusLog.create({
     data: {
       folderId: folder1.id,
       status: 'SENT',
       startedAt: new Date(),
       endedAt: null,
+      department: 'SECRETARIAT',    // กำหนด enum value ที่ถูกต้อง
+      remark: 'สถานะเริ่มต้นแฟ้ม',
+      userId: user1.id,
     },
   })
 
-  // สร้างเอกสารในแฟ้ม
   await prisma.document.createMany({
     data: [
       {

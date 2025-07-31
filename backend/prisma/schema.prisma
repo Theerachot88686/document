@@ -8,11 +8,22 @@ datasource db {
 }
 
 enum FolderStatus {
-  SENT      // ส่งแฟ้ม
-  RECEIVED  // รับแฟ้ม
+  SENT // ส่งแฟ้ม
+  RECEIVED // รับแฟ้ม
   COMPLETED // เสร็จสิ้น
-  ARCHIVED  // เก็บประวัติ
+  ARCHIVED // เก็บประวัติ
 }
+
+enum Department {
+  STRATEGIC_AND_PROJECTS    // งานยุทธศาสตร์และแผนงานโครงการ
+  FINANCE_GROUP             // กลุ่มงานการเงิน
+  HUMAN_RESOURCES           // งานทรัพยากรบุคคล
+  NURSING_GROUP             // กลุ่มการพยาบาล
+  SECRETARIAT               // งานเลขานุการ
+  DIGITAL_HEALTH_MISSION    // กลุ่มภารกิจสุขภาพดิจิทัล
+  SUPPLY_GROUP              // กลุ่มงานพัสดุ
+}
+
 
 model User {
   id        Int      @id @default(autoincrement())
@@ -23,9 +34,10 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
-  createdDocs    Document[] @relation("CreatedByUser")    // ผู้ใช้สร้างเอกสาร
-  receivedDocs   Document[] @relation("ReceivedByUser")   // ผู้ใช้เป็นผู้รับเอกสาร
-  createdFolders Folder[]                                  // ผู้ใช้สร้างแฟ้ม
+  createdDocs      Document[]        @relation("CreatedByUser") // ผู้ใช้สร้างเอกสาร
+  receivedDocs     Document[]        @relation("ReceivedByUser") // ผู้ใช้เป็นผู้รับเอกสาร
+  folderStatusLogs FolderStatusLog[] // สถานะแฟ้มที่ผู้ใช้นี้เปลี่ยน
+  createdFolders   Folder[] // ผู้ใช้สร้างแฟ้ม
 }
 
 model Document {
@@ -52,23 +64,27 @@ model Folder {
   id          Int          @id @default(autoincrement())
   title       String
   qrToken     String
-  status      FolderStatus @default(SENT)  // default เป็น SENT
+  status      FolderStatus @default(SENT) // default เป็น SENT
   createdAt   DateTime     @default(now())
   createdById Int
 
-  createdBy  User               @relation(fields: [createdById], references: [id])
-  documents  Document[]         @relation("FolderDocuments")
+  createdBy  User              @relation(fields: [createdById], references: [id])
+  documents  Document[]        @relation("FolderDocuments")
   statusLogs FolderStatusLog[] // เก็บประวัติสถานะแฟ้ม
 }
 
 model FolderStatusLog {
-  id        Int          @id @default(autoincrement())
-  folderId  Int
-  status    FolderStatus
-  startedAt DateTime     @default(now())
-  endedAt   DateTime?
+  id         Int          @id @default(autoincrement())
+  folderId   Int
+  status     FolderStatus
+  startedAt  DateTime     @default(now())
+  endedAt    DateTime?
+  department Department?  // ใช้ enum แทน string
+  remark     String?      // หมายเหตุ
+  userId     Int          // ผู้เปลี่ยนสถานะ
 
-  folder    Folder       @relation(fields: [folderId], references: [id])
+  folder Folder @relation(fields: [folderId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
 
   @@index([folderId, status])
 }

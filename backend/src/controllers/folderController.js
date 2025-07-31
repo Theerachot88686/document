@@ -9,7 +9,12 @@ export const getFolders = async (req, res) => {
       include: {
         createdBy: { select: { id: true, name: true, username: true } },
         documents: { select: { id: true, docNumber: true, subject: true } },
-        statusLogs: true, // ถ้าต้องการดึงประวัติสถานะด้วย
+        statusLogs: {
+          include: {
+            user: { select: { id: true, name: true, username: true } } // ดึงคนเปลี่ยนสถานะ
+          },
+          orderBy: { startedAt: 'desc' }
+        },
       },
       orderBy: { createdAt: 'desc' }
     })
@@ -31,7 +36,12 @@ export const getFolderById = async (req, res) => {
       include: {
         createdBy: { select: { id: true, name: true, username: true } },
         documents: { select: { id: true, docNumber: true, subject: true } },
-        statusLogs: true,
+        statusLogs: {
+          include: {
+            user: { select: { id: true, name: true, username: true } }
+          },
+          orderBy: { startedAt: 'desc' }
+        },
       }
     })
     if (!folder) return res.status(404).json({ message: 'Folder not found' })
@@ -57,11 +67,12 @@ export const createFolder = async (req, res) => {
         title,
         createdById: Number(createdById),
         qrToken,
-        status: 'SENT',  // ค่าต้องตรงกับ enum FolderStatus
+        status: 'ARCHIVED',  // ค่าต้องตรงกับ enum FolderStatus
         statusLogs: {
           create: {
-            status: 'SENT',
+            status: 'ARCHIVED',
             startedAt: new Date(),
+            userId: Number(createdById), // คนสร้างแฟ้มถือเป็นคนเปลี่ยนสถานะเริ่มต้น
           }
         }
       },
@@ -78,14 +89,31 @@ export const createFolder = async (req, res) => {
 }
 
 // แก้ไขแฟ้ม
+
 export const updateFolder = async (req, res) => {
   const id = parseInt(req.params.id)
   if (isNaN(id)) return res.status(400).json({ message: 'Invalid folder ID' })
 
-  const { title, qrToken, status } = req.body
+  // department ควรเป็น string ที่ตรงกับชื่อ enum เท่านั้น เช่น "STRATEGIC_AND_PROJECTS"
+  // ควรตรวจสอบความถูกต้องของค่า department ก่อนใช้งาน
+  const { title, qrToken, status, department, remark, userId } = req.body
+
+  // กำหนดรายการ enum ที่อนุญาต
+  const validDepartments = [
+    'STRATEGIC_AND_PROJECTS',
+    'FINANCE_GROUP',
+    'HUMAN_RESOURCES',
+    'NURSING_GROUP',
+    'SECRETARIAT',
+    'DIGITAL_HEALTH_MISSION',
+    'SUPPLY_GROUP'
+  ]
+
+  if (department && !validDepartments.includes(department)) {
+    return res.status(400).json({ message: 'ค่า department ไม่ถูกต้อง' })
+  }
 
   try {
-    // ดึงแฟ้มพร้อม statusLogs ล่าสุด 1 รายการ
     const existingFolder = await prisma.folder.findUnique({
       where: { id },
       include: { statusLogs: { orderBy: { startedAt: 'desc' }, take: 1 } }
@@ -96,9 +124,12 @@ export const updateFolder = async (req, res) => {
     if (title !== undefined) updateData.title = title
     if (qrToken !== undefined) updateData.qrToken = qrToken
 
-    // ถ้ามีการเปลี่ยนสถานะ และต่างจากสถานะเดิม
     if (status !== undefined && status !== existingFolder.status) {
-      // ปิดสถานะเก่าที่ยังไม่ปิด (endedAt ยัง null)
+      if (!userId) {
+        return res.status(400).json({ message: 'ต้องระบุ userId เพื่อบันทึกการเปลี่ยนสถานะ' })
+      }
+
+      // ปิดสถานะเก่าที่ยังไม่ปิด
       const lastStatusLog = existingFolder.statusLogs[0]
       if (lastStatusLog && !lastStatusLog.endedAt) {
         await prisma.folderStatusLog.update({
@@ -113,17 +144,20 @@ export const updateFolder = async (req, res) => {
         data: { status }
       })
 
-      // สร้าง statusLog ใหม่ (ผูกกับ folderId)
+      // สร้าง statusLog ใหม่ พร้อมบันทึก department (enum) และ remark
       await prisma.folderStatusLog.create({
         data: {
           folderId: id,
           status,
-          startedAt: new Date()
+          startedAt: new Date(),
+          userId: Number(userId),
+          department: department || null,
+          remark: remark || null,
         }
       })
     }
 
-    // อัพเดตข้อมูลอื่น ๆ (title, qrToken) ถ้ามี
+    // อัพเดตข้อมูลอื่น ๆ
     if (Object.keys(updateData).length > 0) {
       await prisma.folder.update({
         where: { id },
@@ -131,10 +165,14 @@ export const updateFolder = async (req, res) => {
       })
     }
 
-    // ดึงข้อมูลแฟ้มพร้อม statusLogs ใหม่ เพื่อส่งกลับ
     const updatedFolder = await prisma.folder.findUnique({
       where: { id },
-      include: { statusLogs: true }
+      include: {
+        statusLogs: {
+          include: { user: { select: { id: true, name: true, username: true } } },
+          orderBy: { startedAt: 'desc' }
+        }
+      }
     })
 
     res.status(200).json(updatedFolder)
@@ -147,23 +185,46 @@ export const updateFolder = async (req, res) => {
 
 // ลบแฟ้ม
 export const deleteFolder = async (req, res) => {
-  const id = parseInt(req.params.id)
-  if (isNaN(id)) return res.status(400).json({ message: 'Invalid folder ID' })
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) return res.status(400).json({ message: 'Invalid folder ID' });
 
   try {
-    const existingFolder = await prisma.folder.findUnique({ where: { id } })
-    if (!existingFolder) return res.status(404).json({ message: 'Folder not found' })
+    // ⏳ ตรวจสอบว่า documents และ statusLogs ที่เกี่ยวข้องมีอะไรบ้าง
+    const docs = await prisma.document.findMany({ where: { folderId: id } });
+    console.log('📁 Documents to delete:', docs);
 
-    await prisma.folder.delete({ where: { id } })
-    res.status(200).json({ message: 'ลบแฟ้มสำเร็จ' })
+    const logs = await prisma.folderStatusLog.findMany({ where: { folderId: id } });
+    console.log('📜 StatusLogs to delete:', logs);
+
+    // 🔥 1. ลบ StatusLogs
+    await prisma.folderStatusLog.deleteMany({
+      where: { folderId: id },
+    });
+
+    // 🔥 2. ลบ Documents
+    await prisma.document.deleteMany({
+      where: { folderId: id },
+    });
+
+    // ✅ 3. ลบแฟ้ม
+    await prisma.folder.delete({
+      where: { id },
+    });
+
+    res.status(200).json({ message: 'ลบแฟ้มสำเร็จ' });
   } catch (error) {
-    console.error('Error deleting folder:', error)
-    if (error.code === 'P2003') {
-      return res.status(409).json({
-        message: 'ไม่สามารถลบแฟ้มได้ เนื่องจากมีเอกสารที่เกี่ยวข้อง กรุณาลบเอกสารก่อน',
-        error: error.message,
-      })
-    }
-    res.status(500).json({ message: 'ลบแฟ้มไม่สำเร็จ', error: error.message })
+    console.error('❌ ลบแฟ้มผิดพลาด:', error);
+    res.status(500).json({
+      message: 'ลบแฟ้มไม่สำเร็จ',
+      error: error.message,
+      code: error.code,
+    });
   }
-}
+};
+
+
+
+
+
+
+

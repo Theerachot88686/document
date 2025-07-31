@@ -14,7 +14,9 @@ export default function FolderListAndDocuments() {
   const [showDocForm, setShowDocForm] = useState(false);
   const [editingDoc, setEditingDoc] = useState(null);
   const [searchFolder, setSearchFolder] = useState("");
-  
+  const [editingFolder, setEditingFolder] = useState(null);
+  const [showFolderForm, setShowFolderForm] = useState(false);
+
 
   const token = localStorage.getItem("token");
   const currentUser = JSON.parse(localStorage.getItem("user")) || null;
@@ -22,8 +24,6 @@ export default function FolderListAndDocuments() {
   // Dark mode toggle state
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("darkMode") === "true");
 
-
-  
   // ฟังก์ชันหาเวลาอัปเดตสถานะล่าสุดจาก folder.statusLogs
   function getStatusUpdatedAt(folder) {
     if (!folder || !folder.statusLogs || folder.statusLogs.length === 0) return null;
@@ -41,139 +41,265 @@ export default function FolderListAndDocuments() {
   }
 
 
+function getStatusColor(status) {
+  switch (status) {
+    case 'SENT':
+      return 'text-red-600 dark:text-red-400'      // ส่ง = แดง
+    case 'RECEIVED':
+      return 'text-yellow-600 dark:text-yellow-400' // รับ = เหลือง
+    case 'COMPLETED':
+      return 'text-green-600 dark:text-green-400'  // เสร็จ = เขียว
+    case 'ARCHIVED':
+      return 'text-gray-600 dark:text-gray-400'
+    default:
+      return 'text-gray-800 dark:text-gray-300'
+  }
+}
 
 
-  function getStatusColor(status) {
-    switch (status) {
-      case 'SENT':
-        return 'text-green-600 dark:text-green-400'
-      case 'RECEIVED':
-        return 'text-yellow-600 dark:text-yellow-400'
-      case 'COMPLETED':
-        return 'text-blue-600 dark:text-blue-400'
-      case 'ARCHIVED':
-        return 'text-gray-600 dark:text-gray-400'
-      default:
-        return 'text-gray-800 dark:text-gray-300'
-    }
+  function FolderEditForm({ folder, onClose, onSave, currentUser }) {
+    const [formData, setFormData] = useState({
+      title: folder?.title || "",
+    });
+
+    const handleChange = (e) => {
+      const { name, value } = e.target;
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    };
+
+    const handleSubmit = (e) => {
+      e.preventDefault();
+      if (!formData.title.trim()) {
+        Swal.fire("กรุณากรอกชื่อแฟ้ม", "", "warning");
+        return;
+      }
+      // ส่งข้อมูลเป็นออบเจกต์เดียว รวม id กับ formData
+      onSave({ id: folder.id, ...formData });
+    };
+
+    return (
+      <div className="fixed inset-0 bg-gray-900/30 backdrop-blur-sm flex items-center justify-center z-50 p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 w-full max-w-md animate-fadeIn">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              แก้ไขชื่อแฟ้ม
+            </h3>
+            <button
+              onClick={onClose}
+              className="cursor-pointer text-red-500 text-2xl hover:text-red-600 transition-colors"
+            >
+              <FiX />
+            </button>
+          </div>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                ชื่อแฟ้ม
+              </label>
+              <input
+                type="text"
+                name="title"
+                value={formData.title}
+                onChange={handleChange}
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2
+                         bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100
+                         focus:outline-none focus:ring-2 focus:ring-blue-500"
+                autoFocus
+                placeholder="กรอกชื่อแฟ้มใหม่"
+              />
+            </div>
+            <div className="flex justify-end gap-4">
+              <button
+                onClick={onClose}
+                type="button"
+                className="cursor-pointer px-5 py-2 rounded-lg bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-400 dark:hover:bg-gray-700 transition"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="submit"
+                className="cursor-pointer px-5 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
+              >
+                บันทึก
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
   }
 
+  const handleSaveEditedFolder = async (updatedFolder) => {
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/api/folders/${updatedFolder.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(updatedFolder),
+        }
+      );
 
+      if (!res.ok) throw new Error("ไม่สามารถบันทึกการแก้ไขได้");
 
-  function printQRCode(qrToken) {
-    // เปิดหน้าต่างใหม่
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
+      const result = await res.json();
 
-    // สร้าง canvas html ด้วย value ของ qrToken
-    const canvasHtml = `
+      setFolders((prev) =>
+        prev.map((f) => (f.id === result.id ? result : f))
+      );
+
+      Swal.fire("สำเร็จ", "แก้ไขแฟ้มเรียบร้อยแล้ว", "success");
+      setShowFolderForm(false);
+      setEditingFolder(null);
+    } catch (err) {
+      console.error(err);
+      Swal.fire("เกิดข้อผิดพลาด", err.message || "ไม่สามารถแก้ไขได้", "error");
+    }
+  };
+
+function printQRCode(folderId) {
+  const printWindow = window.open("", "_blank");
+  if (!printWindow) return;
+
+  const folderUrl = `${window.location.origin}/qrcode/${folderId}`;
+
+  const canvasHtml = `
+  <!DOCTYPE html>
   <html>
     <head>
+      <meta charset="UTF-8" />
       <title>พิมพ์ QR Code</title>
       <style>
         body {
+          margin: 0;
+          padding: 0;
           display: flex;
           justify-content: center;
           align-items: center;
           height: 100vh;
-          margin: 0;
+          background: white;
+        }
+        .card {
+          width: 646px;
+          height: 408px;
+          display: flex;
+          justify-content: center;
+          align-items: center;
         }
         canvas {
-          width: 80px !important;
-          height: 80px !important;
+          width: 240px !important;
+          height: 240px !important;
+        }
+        @media print {
+          body {
+            height: auto;
+          }
+          .card {
+            width: 646px;
+            height: 408px;
+            border: none;
+          }
         }
       </style>
     </head>
     <body>
-      <canvas id="qr-canvas"></canvas>
+      <div class="card">
+        <canvas id="qr-canvas"></canvas>
+      </div>
       <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
       <script>
         const canvas = document.getElementById('qr-canvas');
-        QRCode.toCanvas(canvas, '${qrToken}', { width: 80 }, function (error) {
+        const url = ${JSON.stringify(folderUrl)};
+        QRCode.toCanvas(canvas, url, { width: 240 }, function (error) {
           if (error) {
             document.body.innerHTML = '<p>ไม่สามารถสร้าง QR Code ได้</p>';
           } else {
-            window.print();
+            setTimeout(() => window.print(), 300);
           }
         });
       </script>
     </body>
   </html>
-`;
+  `;
+
+  printWindow.document.write(canvasHtml);
+  printWindow.document.close();
+}
 
 
-    printWindow.document.write(canvasHtml);
-    printWindow.document.close();
-  }
+
 
 
   // Fetch folders
-useEffect(() => {
-  if (!token) {
-    Swal.fire({
-      icon: 'warning',
-      title: 'กรุณาเข้าสู่ระบบ',
-      text: 'คุณต้องล็อกอินก่อนใช้งานหน้านี้',
-      confirmButtonText: 'ตกลง',
-      allowOutsideClick: false,
-    }).then(() => {
-      navigate('/login')
-    })
-    return
-  }
-
-async function fetchFolders() {
-  try {
-    setLoadingFolders(true);
-    setError(null);
-    const baseUrl = import.meta.env.VITE_API_BASE_URL;
-    const res = await fetch(`${baseUrl}/api/folders`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!res.ok) throw new Error("ไม่สามารถดึงข้อมูลแฟ้มได้");
-    const data = await res.json();
-    setFolders(data);
-    if (data.length > 0) {
-      setSelectedFolder(data[0]);
+  useEffect(() => {
+    if (!token) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'กรุณาเข้าสู่ระบบ',
+        text: 'คุณต้องล็อกอินก่อนใช้งานหน้านี้',
+        confirmButtonText: 'ตกลง',
+        allowOutsideClick: false,
+      }).then(() => {
+        navigate('/login')
+      })
+      return
     }
-  } catch (err) {
-    setError(err.message);
-  } finally {
-    setLoadingFolders(false);
-  }
-}
-fetchFolders();
+
+    async function fetchFolders() {
+      try {
+        setLoadingFolders(true);
+        setError(null);
+        const baseUrl = import.meta.env.VITE_API_BASE_URL;
+        const res = await fetch(`${baseUrl}/api/folders`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error("ไม่สามารถดึงข้อมูลแฟ้มได้");
+        const data = await res.json();
+        setFolders(data);
+        if (data.length > 0) {
+          setSelectedFolder(data[0]);
+        }
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoadingFolders(false);
+      }
+    }
+    fetchFolders();
 
   }, [token]);
 
   // Fetch documents when folder selected
-useEffect(() => {
-  if (!selectedFolder) return;
+  useEffect(() => {
+    if (!selectedFolder) return;
 
-  async function fetchDocuments() {
-    setLoadingDocs(true);
-    setError(null);
-    try {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL;
+    async function fetchDocuments() {
+      setLoadingDocs(true);
+      setError(null);
+      try {
+        const baseUrl = import.meta.env.VITE_API_BASE_URL;
 
-      const res = await fetch(
-        `${baseUrl}/api/documents/by-folder/?folderId=${selectedFolder.id}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      if (!res.ok) throw new Error("ไม่สามารถดึงข้อมูลเอกสารในแฟ้มนี้ได้");
-      const data = await res.json();
-      setDocuments(data);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoadingDocs(false);
+        const res = await fetch(
+          `${baseUrl}/api/documents/by-folder/?folderId=${selectedFolder.id}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        if (!res.ok) throw new Error("ไม่สามารถดึงข้อมูลเอกสารในแฟ้มนี้ได้");
+        const data = await res.json();
+        setDocuments(data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoadingDocs(false);
+      }
     }
-  }
 
-  fetchDocuments();
-}, [selectedFolder, token]);
+    fetchDocuments();
+  }, [selectedFolder, token]);
 
 
 
@@ -203,87 +329,87 @@ useEffect(() => {
     setShowDocForm(true);
   };
 
-  // Delete folder handler
-const handleDeleteFolder = async (folderId) => {
-  const confirmed = await Swal.fire({
-    title: "คุณแน่ใจหรือไม่ว่าจะลบแฟ้มนี้?",
-    text: "การลบแฟ้มจะลบเอกสารทั้งหมดภายในแฟ้มนี้ด้วย",
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonText: "ใช่, ลบเลย",
-    cancelButtonText: "ยกเลิก",
-  });
-
-  if (!confirmed.isConfirmed) return;
-
-  try {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL;
-
-    const res = await fetch(`${baseUrl}/api/folders/${folderId}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
+  const handleDeleteFolder = async (folderId) => {
+    const confirmed = await Swal.fire({
+      title: "คุณแน่ใจหรือไม่ว่าจะลบแฟ้มนี้?",
+      text: "การลบแฟ้มจะลบเอกสารทั้งหมดภายในแฟ้มนี้ด้วย",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "ใช่, ลบเลย",
+      cancelButtonText: "ยกเลิก",
     });
 
-    if (!res.ok) throw new Error("ลบแฟ้มไม่สำเร็จ");
+    if (!confirmed.isConfirmed) return;
 
-    Swal.fire("ลบสำเร็จ", "แฟ้มถูกลบเรียบร้อยแล้ว", "success");
+    try {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL;
+      const res = await fetch(`${baseUrl}/api/folders/${folderId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-    const updatedFolders = folders.filter((f) => f.id !== folderId);
-    setFolders(updatedFolders);
-    setSelectedFolder(null);
-  } catch (err) {
-    Swal.fire("เกิดข้อผิดพลาด", err.message, "error");
-  }
-};
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "ลบแฟ้มไม่สำเร็จ");
+      }
+
+      Swal.fire("ลบสำเร็จ", "แฟ้มถูกลบเรียบร้อยแล้ว", "success");
+
+      // อัพเดต state ลบแฟ้มที่ถูกลบออก
+      setFolders((prev) => prev.filter((f) => f.id !== folderId));
+    } catch (err) {
+      Swal.fire("เกิดข้อผิดพลาด", err.message, "error");
+    }
+  };
 
 
   // Delete document handler
-const handleDeleteDocument = async (docId) => {
-  const confirmed = await Swal.fire({
-    title: "คุณแน่ใจหรือไม่ว่าจะลบเอกสารนี้?",
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonText: "ใช่, ลบเลย",
-    cancelButtonText: "ยกเลิก",
-  });
-  if (!confirmed.isConfirmed) return;
-
-  try {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL;
-
-    const res = await fetch(`${baseUrl}/api/documents/${docId}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
+  const handleDeleteDocument = async (docId) => {
+    const confirmed = await Swal.fire({
+      title: "คุณแน่ใจหรือไม่ว่าจะลบเอกสารนี้?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "ใช่, ลบเลย",
+      cancelButtonText: "ยกเลิก",
     });
+    if (!confirmed.isConfirmed) return;
 
-    if (!res.ok) throw new Error("ลบเอกสารล้มเหลว");
+    try {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL;
 
-    Swal.fire("ลบเอกสารสำเร็จ", "", "success");
+      const res = await fetch(`${baseUrl}/api/documents/${docId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-    const updatedDocs = documents.filter((doc) => doc.id !== docId);
-    setDocuments(updatedDocs);
-  } catch (err) {
-    Swal.fire("เกิดข้อผิดพลาด", err.message, "error");
-  }
-};
+      if (!res.ok) throw new Error("ลบเอกสารล้มเหลว");
+
+      Swal.fire("ลบเอกสารสำเร็จ", "", "success");
+
+      const updatedDocs = documents.filter((doc) => doc.id !== docId);
+      setDocuments(updatedDocs);
+    } catch (err) {
+      Swal.fire("เกิดข้อผิดพลาด", err.message, "error");
+    }
+  };
 
 
   const statusMap = {
     SENT: 'ส่งแฟ้ม',
     RECEIVED: 'รับแฟ้ม',
     COMPLETED: 'เสร็จสิ้น',
-    ARCHIVED: 'เก็บประวัติ',
+    ARCHIVED: 'เริ่มต้น',
   }
 
-const departments = [
-  "งานยุทธศาสตร์และแผนงานโครงการ",
-  "กลุ่มงานการเงิน",
-  "งานทรัพยากรบุคคล",
-  "กลุ่มการพยาบาล",
-  "งานเลขานุการ",
-  "กลุ่มภารกิจสุขภาพดิจิทัล",
-  "กลุ่มงานพัสดุ"
-];
+  const departments = [
+    "งานยุทธศาสตร์และแผนงานโครงการ",
+    "กลุ่มงานการเงิน",
+    "งานทรัพยากรบุคคล",
+    "กลุ่มการพยาบาล",
+    "งานเลขานุการ",
+    "กลุ่มภารกิจสุขภาพดิจิทัล",
+    "กลุ่มงานพัสดุ"
+  ];
 
 
   // Document form component
@@ -468,57 +594,57 @@ const departments = [
   const statuses = Object.entries(statusMap).map(([value, label]) => ({ value, label }));
 
   // Save document (add/edit)
-const saveDocument = async (data) => {
-  try {
-    const { createdAt, filePath, ...restData } = data;
+  const saveDocument = async (data) => {
+    try {
+      const { createdAt, filePath, ...restData } = data;
 
-    const payload = {
-      ...restData,
-      folderId: selectedFolder?.id,
-      createdById: currentUser?.id,
-      agencyType: restData.agencyType || "",
-    };
+      const payload = {
+        ...restData,
+        folderId: selectedFolder?.id,
+        createdById: currentUser?.id,
+        agencyType: restData.agencyType || "",
+      };
 
-    const baseUrl = import.meta.env.VITE_API_BASE_URL;
+      const baseUrl = import.meta.env.VITE_API_BASE_URL;
 
-    const url = editingDoc
-      ? `${baseUrl}/api/documents/${editingDoc.id}`
-      : `${baseUrl}/api/documents`;
+      const url = editingDoc
+        ? `${baseUrl}/api/documents/${editingDoc.id}`
+        : `${baseUrl}/api/documents`;
 
-    const method = editingDoc ? "PUT" : "POST";
+      const method = editingDoc ? "PUT" : "POST";
 
-    const res = await fetch(url, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(payload),
-    });
+      const res = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
 
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(errorText || (editingDoc ? "แก้ไขเอกสารล้มเหลว" : "เพิ่มเอกสารล้มเหลว"));
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || (editingDoc ? "แก้ไขเอกสารล้มเหลว" : "เพิ่มเอกสารล้มเหลว"));
+      }
+
+      Swal.fire("บันทึกสำเร็จ", "", "success");
+
+      // ดึงข้อมูลเอกสารใหม่
+      const updatedRes = await fetch(`${baseUrl}/api/documents?folderId=${selectedFolder?.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!updatedRes.ok) throw new Error("ดึงข้อมูลเอกสารไม่สำเร็จ");
+
+      const updatedDocs = await updatedRes.json();
+      setDocuments(updatedDocs);
+
+      setShowDocForm(false);
+      setEditingDoc(null);
+    } catch (err) {
+      Swal.fire("เกิดข้อผิดพลาด", err.message, "error");
     }
-
-    Swal.fire("บันทึกสำเร็จ", "", "success");
-
-    // ดึงข้อมูลเอกสารใหม่
-    const updatedRes = await fetch(`${baseUrl}/api/documents?folderId=${selectedFolder?.id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    if (!updatedRes.ok) throw new Error("ดึงข้อมูลเอกสารไม่สำเร็จ");
-
-    const updatedDocs = await updatedRes.json();
-    setDocuments(updatedDocs);
-
-    setShowDocForm(false);
-    setEditingDoc(null);
-  } catch (err) {
-    Swal.fire("เกิดข้อผิดพลาด", err.message, "error");
-  }
-};
+  };
 
 
   return (
@@ -554,13 +680,14 @@ const saveDocument = async (data) => {
           )}
         </div>
 
-        {/* Folder List */}
+        {/* Folder List Section */}
         <section className="mb-12">
           <h2 className="text-3xl font-extrabold mb-6 text-gray-800 dark:text-gray-200 flex items-center gap-3 select-none">
             <FiFolder className="text-4xl text-blue-600 dark:text-blue-400" />
             แฟ้มเอกสาร
           </h2>
 
+          {/* Loading / Error / Empty States */}
           {loadingFolders ? (
             <p className="text-gray-500 dark:text-gray-400 animate-pulse select-none text-center py-10">
               กำลังโหลดแฟ้มเอกสาร...
@@ -573,99 +700,131 @@ const saveDocument = async (data) => {
             </p>
           ) : (
             <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-              {filteredFolders
-                .filter(folder => folder.status !== "COMPLETED") // ✅ กรองสถานะที่ไม่ใช่ ARCHIVED
-                .map((folder) => {
-                  const statusUpdatedAt = getStatusUpdatedAt(folder);
+              {filteredFolders.map((folder) => {
+                const statusUpdatedAt = getStatusUpdatedAt(folder);
+                const isSelected = selectedFolder?.id === folder.id;
 
-                  return (
-                    <li
-                      key={folder.id}
-                      onClick={() => handleFolderClick(folder)}
-                      title={folder.title}
-                      className={`cursor-pointer group relative rounded-xl border bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 shadow-md hover:shadow-lg transition-transform duration-300 transform hover:scale-105 p-6 flex flex-col justify-between select-none
-            ${selectedFolder?.id === folder.id
-                          ? "border-blue-500 bg-blue-50 dark:bg-blue-900 dark:border-blue-400 shadow-lg"
-                          : ""}
-          `}
-                    >
-                      <div className="mb-4">
-                        <h3 className="text-2xl font-extrabold text-blue-700 dark:text-blue-400 truncate drop-shadow-md">
-                          {folder.title}
-                        </h3>
+                return (
+                  <li
+                    key={folder.id}
+                    onClick={() => handleFolderClick(folder)}
+                    title={folder.title}
+                    className={`cursor-pointer group relative rounded-xl border bg-white dark:bg-gray-900 
+              border-gray-300 dark:border-gray-700 shadow-md hover:shadow-lg transition-transform 
+              duration-300 transform hover:scale-105 p-6 flex flex-col justify-between select-none 
+              ${isSelected ? "border-blue-500 bg-blue-50 dark:bg-blue-900 dark:border-blue-400 shadow-lg" : ""}
+            `}
+                  >
+                    {/* Title & Status */}
+                    <div className="mb-4">
+                      <h3 className="text-2xl font-extrabold text-blue-700 dark:text-blue-400 truncate drop-shadow-md">
+                        {folder.title}
+                      </h3>
 
-                        <p className="mt-1 text-sm text-gray-800 dark:text-gray-300">
-                          สถานะ: <span className={`font-semibold ${getStatusColor(folder.status)}`}>
-                            {statusMap[folder.status] || folder.status || "-"}
-                          </span>
+                      <p className="mt-1 text-sm text-gray-800 dark:text-gray-300">
+                        สถานะ: <span className={`font-semibold ${getStatusColor(folder.status)}`}>
+                          {statusMap[folder.status] || folder.status || "-"}
+                        </span>
+                      </p>
+
+                      {statusUpdatedAt ? (
+                        <p className="text-xs text-gray-500 italic mt-1">
+                          อัปเดตสถานะล่าสุด: {new Date(statusUpdatedAt).toLocaleString()}
                         </p>
+                      ) : (
+                        <p className="text-xs text-gray-400 italic mt-1">
+                          ไม่มีข้อมูลเวลาอัปเดตสถานะ
+                        </p>
+                      )}
+                    </div>
 
-                        {statusUpdatedAt ? (
-                          <p className="text-xs text-gray-500 italic mt-1">
-                            อัปเดตสถานะล่าสุด: {new Date(statusUpdatedAt).toLocaleString()}
-                          </p>
-                        ) : (
-                          <p className="text-xs text-gray-400 italic mt-1">ไม่มีข้อมูลเวลาอัปเดตสถานะ</p>
-                        )}
-                      </div>
+                    {/* QR Code */}
+                    <div className="flex flex-col items-center mb-4 relative">
+                      {folder.qrToken ? (
+                        <>
+                          <Link to={`/qrcode/${folder.id}`}>
+                            <QRCodeCanvas
+                              value={`${window.location.origin}/qrcode/${folder.id}`}
+                              size={120}
+                              className="border border-gray-300 dark:border-gray-700 rounded-md bg-white"
+                            />
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              printQRCode(folder.id);
+                            }}
+                            title="พิมพ์ QR Code"
+                            className="mt-2 bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400 
+                      hover:bg-green-200 dark:hover:bg-green-800 rounded-md px-4 py-1 font-semibold 
+                      flex items-center gap-2 shadow-md cursor-pointer select-none"
+                          >
+                            🖨️ พิมพ์
+                          </button>
+                        </>
+                      ) : (
+                        <p className="italic text-gray-400 dark:text-gray-500 text-center w-full">
+                          ไม่มี QR Code
+                        </p>
+                      )}
+                    </div>
 
-                      <div className="flex flex-col items-center mb-4 relative">
-                        {folder.qrToken ? (
-                          <>
-                            <Link to={`/qrcode/${folder.id}`}>
-                              <QRCodeCanvas
-                                value={`${window.location.origin}/qrcode/${folder.id}`}
-                                size={120}
-                                className="border border-gray-300 dark:border-gray-700 rounded-md bg-white"
-                              />
-                            </Link>
+                    {/* Action Buttons (Edit & Delete) */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingFolder(folder);
+                        setShowFolderForm(true);
+                      }}
+                      title="แก้ไขแฟ้ม"
+                      className="absolute top-3 right-20 opacity-0 group-hover:opacity-100 transition-opacity 
+                duration-300 bg-yellow-100 dark:bg-yellow-900 text-yellow-600 dark:text-yellow-400 
+                hover:bg-yellow-200 dark:hover:bg-yellow-800 rounded-md px-3 py-1 font-semibold 
+                flex items-center gap-1 shadow-md cursor-pointer select-none"
+                    >
+                      <FiEdit className="w-5 h-5" />
+                      แก้ไข
+                    </button>
 
-
-
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                printQRCode(folder.qrToken);
-                              }}
-                              title="พิมพ์ QR Code"
-                              className="mt-2 bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-800 rounded-md px-4 py-1 font-semibold flex items-center gap-2 shadow-md cursor-pointer select-none"
-                            >
-                              🖨️ พิมพ์
-                            </button>
-                          </>
-                        ) : (
-                          <p className="italic text-gray-400 dark:text-gray-500 text-center w-full">
-                            ไม่มี QR Code
-                          </p>
-                        )}
-                      </div>
-
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteFolder(folder.id);
-                        }}
-                        title="ลบแฟ้ม"
-                        className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-800 rounded-md px-3 py-1 font-semibold flex items-center gap-1 shadow-md cursor-pointer select-none"
-                      >
-                        <FiTrash2 className="w-5 h-5" />
-                        ลบ
-                      </button>
-                    </li>
-                  );
-                })}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteFolder(folder.id);
+                      }}
+                      title="ลบแฟ้ม"
+                      className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity 
+                duration-300 bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 
+                hover:bg-red-200 dark:hover:bg-red-800 rounded-md px-3 py-1 font-semibold 
+                flex items-center gap-1 shadow-md cursor-pointer select-none"
+                    >
+                      <FiTrash2 className="w-5 h-5" />
+                      ลบ
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
-
-
           )}
         </section>
 
+        {/* Folder Edit Form Modal */}
+        {showFolderForm && editingFolder && (
+          <FolderEditForm
+            folder={editingFolder}
+            onClose={() => {
+              setShowFolderForm(false);
+              setEditingFolder(null);
+            }}
+            onSave={handleSaveEditedFolder}
+            currentUser={currentUser}
+          />
+        )}
 
 
 
         {/* Documents in Selected Folder */}
-        {selectedFolder && (
+        {/*{selectedFolder && (
           <section className="bg-white dark:bg-gray-900 p-8 rounded-3xl shadow-2xl">
             <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
               <h2 className="text-3xl font-bold text-blue-800 dark:text-blue-400 flex items-center gap-2">

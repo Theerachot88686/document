@@ -79,14 +79,6 @@ export default function Login() {
               <label htmlFor="password" className="block text-sm font-medium text-gray-900">
                 รหัสผ่าน
               </label>
-              <div className="text-sm">
-                <Link
-                  to="/forgot-password"
-                  className="font-semibold text-indigo-600 hover:text-indigo-500"
-                >
-                  
-                </Link>
-              </div>
             </div>
             <div className="mt-2">
               <input
