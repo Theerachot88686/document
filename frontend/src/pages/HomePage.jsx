@@ -1,12 +1,26 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+
 
 const statusMap = {
   SENT: 'ส่งแฟ้ม',
   RECEIVED: 'รับแฟ้ม',
   COMPLETED: 'เสร็จสิ้น',
-  ARCHIVED: 'เริ่มต้น'
+  ARCHIVED: 'เริ่มต้น',
+}
+
+const statusColorMap = {
+  SENT: 'bg-red-100 text-red-800', // ส่ง = แดง
+  RECEIVED: 'bg-yellow-100 text-yellow-800', // รับ = เหลือง
+  COMPLETED: 'bg-green-100 text-green-800', // เสร็จ = เขียว
+}
+
+const statusColorChart = {
+  SENT: '#EF4444', // แดง
+  RECEIVED: '#FACC15', // เหลือง
+  COMPLETED: '#10B981', // เขียว
+  ARCHIVED: '#9CA3AF', // เทา สำหรับสถานะอื่น ๆ
 }
 
 const departmentMap = {
@@ -19,16 +33,18 @@ const departmentMap = {
   SUPPLY_GROUP: 'กลุ่มงานพัสดุ',
 }
 
+// สร้างข้อมูลสำหรับกราฟ สรุปจำนวนแต่ละสถานะ
 const getStatusDataForChart = (folders = []) => {
   const counts = folders.reduce((acc, folder) => {
-    folder.statusLogs?.forEach(log => {
+    folder.statusLogs?.forEach((log) => {
       acc[log.status] = (acc[log.status] || 0) + 1
     })
     return acc
   }, {})
 
   return Object.entries(counts).map(([status, count]) => ({
-    status: statusMap[status] || status,
+    status,
+    statusLabel: statusMap[status] || status,
     count,
   }))
 }
@@ -119,7 +135,7 @@ export default function Dashboard() {
     fetchData()
   }, [token])
 
-  const filteredFolders = sortedFolders.filter(folder => {
+  const filteredFolders = sortedFolders.filter((folder) => {
     return statusFilter ? folder.status === statusFilter : true
   })
 
@@ -133,39 +149,68 @@ export default function Dashboard() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  if (loading) return <p className="text-center py-10">กำลังโหลดข้อมูล...</p>
-  if (error) return <p className="text-red-500 text-center py-10">{error}</p>
+  if (loading)
+return (
+  <div className="flex items-center justify-center py-20">
+    <p className="text-xl font-semibold text-gray-700 flex space-x-1">
+      <span>กำลังโหลดข้อมูล</span>
+      <span className="flex space-x-1">
+        <span className="animate-bounce [animation-delay:.1s]">.</span>
+        <span className="animate-bounce [animation-delay:.2s]">.</span>
+        <span className="animate-bounce [animation-delay:.3s]">.</span>
+      </span>
+    </p>
+  </div>
+);
+
+
+  if (error)
+    return <p className="text-red-500 text-center py-10">{error}</p>
 
   return (
     <div className="p-4 sm:p-10 bg-gradient-to-b from-blue-50 to-white min-h-screen dark:from-gray-900 dark:to-gray-800">
-      <h1 className="text-3xl sm:text-4xl font-extrabold text-center text-blue-800 dark:text-blue-300 mb-6 sm:mb-10 tracking-wide">
-        แฟ้มเอกสารทั้งหมด
-      </h1>
+
 
       {/* Chart */}
       {folders.length > 0 && (
-        <div className="mb-8 bg-white dark:bg-gray-900 p-4 rounded-lg shadow-md">
-          <h2 className="text-lg font-semibold mb-4 text-gray-700 dark:text-gray-200">
-            กราฟแสดงสถานะที่มีการเปลี่ยนแปลงทั้งหมด
+        <div className="mb-8 bg-white dark:bg-gray-900 p-4 rounded-lg shadow-md w-full max-w-md">
+          <h2 className="text-lg font-semibold mb-4 text-gray-700 dark:text-gray-200 text-center">
+            สถานะที่มีการเปลี่ยนแปลงทั้งหมด
           </h2>
+
           <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={getStatusDataForChart(folders)}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="status" />
-              <YAxis allowDecimals={false} />
+            <PieChart>
+              <Pie
+                data={getStatusDataForChart(folders)}
+                dataKey="count"
+                nameKey="statusLabel"
+                cx="50%"
+                cy="50%"
+                outerRadius={80}
+                fill="#8884d8"
+                label
+              >
+                {getStatusDataForChart(folders).map((entry, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={statusColorChart[entry.status] || '#9CA3AF'}
+                  />
+                ))}
+              </Pie>
               <Tooltip />
-              <Bar dataKey="count" fill="#3B82F6" />
-            </BarChart>
+              <Legend />
+            </PieChart>
           </ResponsiveContainer>
         </div>
       )}
+
 
       {/* Filter */}
       <div className="mb-4 sm:mb-3 flex">
         <div className="relative w-full max-w-xs sm:w-56">
           <select
             value={statusFilter}
-            onChange={e => {
+            onChange={(e) => {
               setStatusFilter(e.target.value)
               setCurrentPage(1)
             }}
@@ -173,41 +218,42 @@ export default function Dashboard() {
           >
             <option value="">-- เลือกสถานะ --</option>
             {Object.entries(statusMap).map(([key, label]) => (
-              <option key={key} value={key}>{label}</option>
+              <option key={key} value={key}>
+                {label}
+              </option>
             ))}
           </select>
           <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
-            <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            <svg
+              className="h-4 w-4"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 9l-7 7-7-7"
+              />
             </svg>
           </div>
         </div>
       </div>
+
       {/* ตาราง */}
       <div className="overflow-x-auto bg-white rounded-2xl shadow-xl dark:bg-gray-900">
         <table className="min-w-[700px] w-full table-auto text-sm text-gray-700 dark:text-gray-200">
           <thead className="bg-blue-200 dark:bg-blue-800 text-gray-800 dark:text-white">
             <tr>
+              <th className="p-3 text-left">ดู</th>
               <th
                 className="p-3 text-left cursor-pointer select-none"
-                onClick={() => toggleSort('createdAt')}
-                title="วันที่สร้าง"
+                onClick={() => toggleSort('status')}
+                title="สถานะ"
               >
-                วันที่สร้าง{renderSortArrow('createdAt')}
-              </th>
-              <th
-                className="p-3 text-left cursor-pointer select-none"
-                onClick={() => toggleSort('title')}
-                title="ชื่อแฟ้ม"
-              >
-                ชื่อแฟ้ม{renderSortArrow('title')}
-              </th>
-              <th
-                className="p-3 text-left cursor-pointer select-none"
-                onClick={() => toggleSort('changerName')}
-                title="ผู้สร้าง"
-              >
-                ผู้สร้าง{renderSortArrow('changerName')}
+                สถานะ{renderSortArrow('status')}
               </th>
               <th
                 className="p-3 text-left cursor-pointer select-none"
@@ -218,10 +264,10 @@ export default function Dashboard() {
               </th>
               <th
                 className="p-3 text-left cursor-pointer select-none"
-                onClick={() => toggleSort('status')}
-                title="สถานะ"
+                onClick={() => toggleSort('changerName')}
+                title="ผู้สร้าง"
               >
-                สถานะ{renderSortArrow('status')}
+                ผู้สร้าง{renderSortArrow('changerName')}
               </th>
               <th
                 className="p-3 text-left cursor-pointer select-none"
@@ -230,23 +276,33 @@ export default function Dashboard() {
               >
                 หมายเหตุ{renderSortArrow('remark')}
               </th>
-              <th className="p-3 text-left">ดู</th>
+              <th
+                className="p-3 text-left cursor-pointer select-none"
+                onClick={() => toggleSort('title')}
+                title="ชื่อแฟ้ม"
+              >
+                ชื่อแฟ้ม{renderSortArrow('title')}
+              </th>
             </tr>
           </thead>
           <tbody>
             {displayedFolders.length === 0 ? (
               <tr>
-                <td colSpan="7" className="text-center py-6 text-gray-500 dark:text-gray-400">
+                <td
+                  colSpan="7"
+                  className="text-center py-6 text-gray-500 dark:text-gray-400"
+                >
                   ไม่มีแฟ้มตามเงื่อนไข
                 </td>
               </tr>
             ) : (
-              displayedFolders.map(folder => {
+              displayedFolders.map((folder) => {
                 const latestLog = folder.statusLogs?.[0]
-
                 const changerName = latestLog?.user?.name || '-'
-
-                const departmentName = departmentMap[latestLog?.department] || latestLog?.department || '-'
+                const departmentName =
+                  departmentMap[latestLog?.department] ||
+                  latestLog?.department ||
+                  '-'
                 const statusText = statusMap[folder.status] || folder.status
                 const startedAt = latestLog?.startedAt
                   ? new Date(latestLog.startedAt).toLocaleString(undefined, {
@@ -260,30 +316,41 @@ export default function Dashboard() {
                   : '-'
 
                 return (
-                  <tr key={folder.id} className="border-b last:border-b-0 hover:bg-blue-50 dark:hover:bg-gray-800 transition">
-                    <td className="p-3" data-label="วันที่สร้าง">
-                      {new Date(folder.createdAt).toLocaleDateString()}
+                  <tr
+                    key={folder.id}
+                    className="border-b last:border-b-0 hover:bg-blue-50 dark:hover:bg-gray-800 transition"
+                  >
+                    <td className="p-3" data-label="ดู">
+                      <Link
+                        to={`/qrcode/${folder.id}`}
+                        className="text-blue-600 hover:underline font-medium"
+                      >
+                        เปิด
+                      </Link>
                     </td>
-                    <td className="p-3" data-label="ชื่อแฟ้ม">
-                      {folder.title || '-'}
+                    <td className="p-3" data-label="สถานะ">
+                      <div
+                        className={`font-semibold text-xs inline-block px-2 py-0.5 rounded-full ${statusColorMap[folder.status] ||
+                          'bg-gray-100 text-gray-800'
+                          }`}
+                      >
+                        {statusText}
+                      </div>
+
+                      <div className="text-xs text-gray-500 mt-1">{startedAt}</div>
+                    </td>
+
+                    <td className="p-3" data-label="หน่วยงาน">
+                      {departmentName}
                     </td>
                     <td className="p-3" data-label="ผู้สร้าง">
                       {changerName}
                     </td>
-                    <td className="p-3" data-label="หน่วยงาน">
-                      {departmentName}
-                    </td>
-                    <td className="p-3" data-label="สถานะ">
-                      <div className="font-semibold">{statusText}</div>
-                      <div className="text-xs text-gray-500">{startedAt}</div>
-                    </td>
                     <td className="p-3" data-label="หมายเหตุ">
                       {latestLog?.remark || '-'}
                     </td>
-                    <td className="p-3" data-label="ดู">
-                      <Link to={`/qrcode/${folder.id}`} className="text-blue-600 hover:underline font-medium">
-                        เปิด
-                      </Link>
+                    <td className="p-3" data-label="ชื่อแฟ้ม">
+                      {folder.title || '-'}
                     </td>
                   </tr>
                 )
@@ -299,17 +366,21 @@ export default function Dashboard() {
           <button
             onClick={() => handlePageChange(currentPage - 1)}
             disabled={currentPage === 1}
-            className={`px-3 py-1 rounded-md border ${currentPage === 1 ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-white hover:bg-blue-100'
+            className={`px-3 py-1 rounded-md border ${currentPage === 1
+              ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+              : 'bg-white hover:bg-blue-100'
               }`}
           >
             ก่อนหน้า
           </button>
 
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
             <button
               key={page}
               onClick={() => handlePageChange(page)}
-              className={`px-3 py-1 rounded-md border ${page === currentPage ? 'bg-blue-600 text-white' : 'bg-white hover:bg-blue-100'
+              className={`px-3 py-1 rounded-md border ${page === currentPage
+                ? 'bg-blue-600 text-white'
+                : 'bg-white hover:bg-blue-100'
                 }`}
             >
               {page}
@@ -319,7 +390,9 @@ export default function Dashboard() {
           <button
             onClick={() => handlePageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
-            className={`px-3 py-1 rounded-md border ${currentPage === totalPages ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-white hover:bg-blue-100'
+            className={`px-3 py-1 rounded-md border ${currentPage === totalPages
+              ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+              : 'bg-white hover:bg-blue-100'
               }`}
           >
             ถัดไป

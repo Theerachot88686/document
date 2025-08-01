@@ -86,47 +86,49 @@ return (
               </svg>
             )}
           </button>
+          
         </div>
 
         {/* Logo */}
         <div className="flex shrink-0 items-center">
           <Link to="/" tabIndex={0}>
             <img
-              src="https://tailwindcss.com/plus-assets/img/logos/mark.svg?color=indigo&shade=500"
+              src="https://img2.pic.in.th/pic/Digital_health_logo.jpeg"
               alt="Your Company"
               className="h-8 w-auto cursor-pointer"
             />
           </Link>
         </div>
 
-        {/* Desktop Menu */}
-        <div className="hidden sm:flex flex-1 justify-center">
-          <div className="flex space-x-4">
-            <Link
-              to="/documents"
-              aria-current="page"
-              className="rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white cursor-pointer"
-              tabIndex={0}
-            >
-              แฟ้มเอกสาร
-            </Link>
-            <Link
-              to="/documents/create"
-              aria-current="page"
-              className="rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white cursor-pointer"
-              tabIndex={0}
-            >
-              เพิ่มแฟ้มเอกสาร
-            </Link>
-            <Link
-              to="/users"
-              className="rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white cursor-pointer"
-              tabIndex={0}
-            >
-              ผู้ใช้งานทั้งหมด
-            </Link>
-          </div>
-        </div>
+{/* Desktop Menu */}
+<div className="hidden sm:flex flex-1 justify-start">  {/* เปลี่ยนจาก justify-center เป็น justify-start */}
+  <div className="flex space-x-4">
+    <Link
+      to="/documents"
+      aria-current="page"
+      className="rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white cursor-pointer"
+      tabIndex={0}
+    >
+      แฟ้มเอกสาร
+    </Link>
+    <Link
+      to="/documents/create"
+      aria-current="page"
+      className="rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white cursor-pointer"
+      tabIndex={0}
+    >
+      เพิ่มแฟ้มเอกสาร
+    </Link>
+    <Link
+      to="/users"
+      className="rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white cursor-pointer"
+      tabIndex={0}
+    >
+      ผู้ใช้งานทั้งหมด
+    </Link>
+  </div>
+</div>
+
 
         {/* User Info */}
         <div className="flex items-center space-x-4">

@@ -139,7 +139,19 @@ export default function UserManagement() {
     }
   }
 
-  if (loading) return <p className="text-center mt-10">กำลังโหลดข้อมูล...</p>
+  if (loading) return (
+  <div className="flex items-center justify-center min-h-screen bg-white">
+    <p className="text-gray-500 dark:text-gray-400 animate-pulse select-none text-center text-lg font-medium">
+      กำลังโหลดข้อมูล
+      <span className="inline-flex space-x-1 ml-1">
+        <span className="animate-bounce [animation-delay:.1s]">.</span>
+        <span className="animate-bounce [animation-delay:.2s]">.</span>
+        <span className="animate-bounce [animation-delay:.3s]">.</span>
+      </span>
+    </p>
+  </div>
+)
+
   if (error) return <p className="text-center mt-10 text-red-600">เกิดข้อผิดพลาด: {error}</p>
 
 return (

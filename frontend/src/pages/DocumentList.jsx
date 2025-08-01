@@ -654,7 +654,7 @@ function printQRCode(folderId) {
         {/* Header */}
         <header className="flex justify-between items-center mb-8">
           <h1 className="text-5xl font-extrabold text-blue-700 dark:text-blue-400 drop-shadow-lg select-none">
-            📁 แฟ้มเอกสาร &amp; 📄 เอกสาร
+            📁 แฟ้มเอกสาร
           </h1>
 
         </header>
@@ -682,16 +682,18 @@ function printQRCode(folderId) {
 
         {/* Folder List Section */}
         <section className="mb-12">
-          <h2 className="text-3xl font-extrabold mb-6 text-gray-800 dark:text-gray-200 flex items-center gap-3 select-none">
-            <FiFolder className="text-4xl text-blue-600 dark:text-blue-400" />
-            แฟ้มเอกสาร
-          </h2>
 
           {/* Loading / Error / Empty States */}
           {loadingFolders ? (
-            <p className="text-gray-500 dark:text-gray-400 animate-pulse select-none text-center py-10">
-              กำลังโหลดแฟ้มเอกสาร...
-            </p>
+<p className="text-gray-500 dark:text-gray-400 animate-pulse select-none text-center py-10 text-lg font-medium">
+  กำลังโหลดแฟ้มเอกสาร
+  <span className="inline-flex space-x-1 ml-1">
+    <span className="animate-bounce [animation-delay:.1s]">.</span>
+    <span className="animate-bounce [animation-delay:.2s]">.</span>
+    <span className="animate-bounce [animation-delay:.3s]">.</span>
+  </span>
+</p>
+
           ) : error ? (
             <p className="text-red-600 font-semibold select-none text-center py-10">{error}</p>
           ) : filteredFolders.length === 0 ? (

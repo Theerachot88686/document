@@ -210,13 +210,19 @@ const renderStatusHistory = () => {
 
 
   if (loadingFolder || loadingDocs) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-tr from-blue-100 to-white">
-        <div className="text-blue-600 text-xl font-semibold animate-pulse">
-          กำลังโหลดข้อมูล...
-        </div>
-      </div>
-    )
+return (
+  <div className="flex items-center justify-center min-h-screen bg-gradient-to-tr from-blue-100 to-white">
+    <div className="text-blue-600 text-xl font-semibold animate-pulse text-center">
+      กำลังโหลดข้อมูล
+      <span className="inline-flex space-x-1 ml-1">
+        <span className="animate-bounce [animation-delay:.1s]">.</span>
+        <span className="animate-bounce [animation-delay:.2s]">.</span>
+        <span className="animate-bounce [animation-delay:.3s]">.</span>
+      </span>
+    </div>
+  </div>
+)
+
   }
 
   if (error) {
