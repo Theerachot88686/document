@@ -106,7 +106,8 @@ export const updateFolder = async (req, res) => {
     'NURSING_GROUP',
     'SECRETARIAT',
     'DIGITAL_HEALTH_MISSION',
-    'SUPPLY_GROUP'
+    'SUPPLY_GROUP',
+    'ADMINISTRATIVE_GROUP ' 
   ]
 
   if (department && !validDepartments.includes(department)) {

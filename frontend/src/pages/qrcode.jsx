@@ -5,8 +5,6 @@ import { QRCodeCanvas } from 'qrcode.react'
 
 const statusMap = {
   ARCHIVED: 'เริ่มต้น',
-  SENT: 'ส่งแฟ้ม',
-  RECEIVED: 'รับแฟ้ม',
   COMPLETED: 'เสร็จสิ้น',
 }
 
@@ -18,11 +16,11 @@ const departmentMap = {
   SECRETARIAT: 'งานเลขานุการ',
   DIGITAL_HEALTH_MISSION: 'กลุ่มภารกิจสุขภาพดิจิทัล',
   SUPPLY_GROUP: 'กลุ่มงานพัสดุ',
+  ADMINISTRATIVE_GROUP : 'กลุ่มงานธุรการ'
 }
 
 const statusColorMap = {
-  SENT: 'bg-red-100 text-red-800',       // ส่ง = แดง
-  RECEIVED: 'bg-yellow-100 text-yellow-800', // รับ = เหลือง
+  ARCHIVED: 'bg-red-100 text-red-800',       // ส่ง = แดง
   COMPLETED: 'bg-green-100 text-green-800',  // เสร็จ = เขียว
 }
 

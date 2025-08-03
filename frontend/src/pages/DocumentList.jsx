@@ -43,16 +43,10 @@ export default function FolderListAndDocuments() {
 
 function getStatusColor(status) {
   switch (status) {
-    case 'SENT':
+    case 'ARCHIVED':
       return 'text-red-600 dark:text-red-400'      // ส่ง = แดง
-    case 'RECEIVED':
-      return 'text-yellow-600 dark:text-yellow-400' // รับ = เหลือง
     case 'COMPLETED':
       return 'text-green-600 dark:text-green-400'  // เสร็จ = เขียว
-    case 'ARCHIVED':
-      return 'text-gray-600 dark:text-gray-400'
-    default:
-      return 'text-gray-800 dark:text-gray-300'
   }
 }
 

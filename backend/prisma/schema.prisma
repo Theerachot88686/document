@@ -22,6 +22,7 @@ enum Department {
   SECRETARIAT               // งานเลขานุการ
   DIGITAL_HEALTH_MISSION    // กลุ่มภารกิจสุขภาพดิจิทัล
   SUPPLY_GROUP              // กลุ่มงานพัสดุ
+  ADMINISTRATIVE_GROUP      // กลุ่มงานธุรการ
 }
 
 

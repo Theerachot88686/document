@@ -4,23 +4,19 @@ import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recha
 
 
 const statusMap = {
-  SENT: 'ส่งแฟ้ม',
-  RECEIVED: 'รับแฟ้ม',
+    ARCHIVED: 'เริ่มต้น',
   COMPLETED: 'เสร็จสิ้น',
-  ARCHIVED: 'เริ่มต้น',
+
 }
 
 const statusColorMap = {
-  SENT: 'bg-red-100 text-red-800', // ส่ง = แดง
-  RECEIVED: 'bg-yellow-100 text-yellow-800', // รับ = เหลือง
+  ARCHIVED: 'bg-red-100 text-red-800', // ส่ง = แดง
   COMPLETED: 'bg-green-100 text-green-800', // เสร็จ = เขียว
 }
 
 const statusColorChart = {
-  SENT: '#EF4444', // แดง
-  RECEIVED: '#FACC15', // เหลือง
+  ARCHIVED: '#EF4444', // แดง
   COMPLETED: '#10B981', // เขียว
-  ARCHIVED: '#9CA3AF', // เทา สำหรับสถานะอื่น ๆ
 }
 
 const departmentMap = {
@@ -31,6 +27,7 @@ const departmentMap = {
   SECRETARIAT: 'งานเลขานุการ',
   DIGITAL_HEALTH_MISSION: 'กลุ่มภารกิจสุขภาพดิจิทัล',
   SUPPLY_GROUP: 'กลุ่มงานพัสดุ',
+  ADMINISTRATIVE_GROUP : 'กลุ่มงานธุรการ'
 }
 
 // สร้างข้อมูลสำหรับกราฟ สรุปจำนวนแต่ละสถานะ
