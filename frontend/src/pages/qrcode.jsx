@@ -16,7 +16,7 @@ const departmentMap = {
   SECRETARIAT: 'งานเลขานุการ',
   DIGITAL_HEALTH_MISSION: 'กลุ่มภารกิจสุขภาพดิจิทัล',
   SUPPLY_GROUP: 'กลุ่มงานพัสดุ',
-  ADMINISTRATIVE_GROUP : 'กลุ่มงานธุรการ'
+  ADMINISTRATIVE_GROUP: 'กลุ่มงานธุรการ',
 }
 
 const statusColorMap = {
@@ -58,11 +58,13 @@ export default function FolderQRCode() {
         })
         if (!res.ok) throw new Error('ไม่สามารถดึงข้อมูลแฟ้มได้')
         const data = await res.json()
+        const currentLog = data.statusLogs.find((log) => !log.endedAt)
 
         setFolder(data)
         setStatus(data.status || '')
-        setStatusDepartment(data.statusLogs[0]?.department || '')
-        setNotes(data.statusLogs[0]?.remark || '')
+        setStatusDepartment(currentLog?.department || '')
+        setNotes(currentLog?.remark || '')
+
       } catch (err) {
         setError(err.message)
       } finally {
@@ -162,8 +164,8 @@ const renderStatusHistory = () => {
   if (statusLogs.length === 0)
     return <p className="italic text-gray-400">ไม่มีประวัติสถานะ</p>
 
-  // แสดงเฉพาะ 5 รายการล่าสุด และใส่ scroll ถ้ามากกว่านั้น
-  const latestLogs = statusLogs
+  // ✅ แก้ให้ sort แบบไม่เปลี่ยนต้นฉบับ
+  const latestLogs = [...statusLogs]
     .sort((a, b) => new Date(b.startedAt) - new Date(a.startedAt))
     .slice(0, 5)
 
@@ -207,19 +209,20 @@ const renderStatusHistory = () => {
 }
 
 
+
   if (loadingFolder || loadingDocs) {
-return (
-  <div className="flex items-center justify-center min-h-screen bg-gradient-to-tr from-blue-100 to-white">
-    <div className="text-blue-600 text-xl font-semibold animate-pulse text-center">
-      กำลังโหลดข้อมูล
-      <span className="inline-flex space-x-1 ml-1">
-        <span className="animate-bounce [animation-delay:.1s]">.</span>
-        <span className="animate-bounce [animation-delay:.2s]">.</span>
-        <span className="animate-bounce [animation-delay:.3s]">.</span>
-      </span>
-    </div>
-  </div>
-)
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-tr from-blue-100 to-white">
+        <div className="text-blue-600 text-xl font-semibold animate-pulse text-center">
+          กำลังโหลดข้อมูล
+          <span className="inline-flex space-x-1 ml-1">
+            <span className="animate-bounce [animation-delay:.1s]">.</span>
+            <span className="animate-bounce [animation-delay:.2s]">.</span>
+            <span className="animate-bounce [animation-delay:.3s]">.</span>
+          </span>
+        </div>
+      </div>
+    )
 
   }
 

@@ -99,16 +99,17 @@ export const updateFolder = async (req, res) => {
   const { title, qrToken, status, department, remark, userId } = req.body
 
   // กำหนดรายการ enum ที่อนุญาต
-  const validDepartments = [
-    'STRATEGIC_AND_PROJECTS',
-    'FINANCE_GROUP',
-    'HUMAN_RESOURCES',
-    'NURSING_GROUP',
-    'SECRETARIAT',
-    'DIGITAL_HEALTH_MISSION',
-    'SUPPLY_GROUP',
-    'ADMINISTRATIVE_GROUP ' 
-  ]
+const validDepartments = [
+  'STRATEGIC_AND_PROJECTS',
+  'FINANCE_GROUP',
+  'HUMAN_RESOURCES',
+  'NURSING_GROUP',
+  'SECRETARIAT',
+  'DIGITAL_HEALTH_MISSION',
+  'SUPPLY_GROUP',
+  'ADMINISTRATIVE_GROUP'
+]
+
 
   if (department && !validDepartments.includes(department)) {
     return res.status(400).json({ message: 'ค่า department ไม่ถูกต้อง' })

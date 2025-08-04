@@ -27,7 +27,7 @@ const departmentMap = {
   SECRETARIAT: 'งานเลขานุการ',
   DIGITAL_HEALTH_MISSION: 'กลุ่มภารกิจสุขภาพดิจิทัล',
   SUPPLY_GROUP: 'กลุ่มงานพัสดุ',
-  ADMINISTRATIVE_GROUP : 'กลุ่มงานธุรการ'
+  ADMINISTRATIVE_GROUP : 'กลุ่มงานธุรการ',
 }
 
 // สร้างข้อมูลสำหรับกราฟ สรุปจำนวนแต่ละสถานะ
@@ -294,7 +294,7 @@ return (
               </tr>
             ) : (
               displayedFolders.map((folder) => {
-                const latestLog = folder.statusLogs?.[0]
+                const latestLog = folder.statusLogs?.find((log) => !log.endedAt) || folder.statusLogs?.[0]
                 const changerName = latestLog?.user?.name || '-'
                 const departmentName =
                   departmentMap[latestLog?.department] ||
