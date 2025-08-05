@@ -60,7 +60,7 @@ export default function UserManagement() {
   function handleInputChange(e) {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
   }
-
+//123
   // 2. แก้ไข handleSubmit ให้ส่ง password เฉพาะเมื่อกรอกเท่านั้น
   async function handleSubmit(e) {
     e.preventDefault()
