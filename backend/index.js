@@ -21,7 +21,7 @@ export const prisma = new PrismaClient() // Export prisma client if you want to 
 app.use(cors())
 app.use(express.json())
 
-// Base Route
+// Base Route 123
 app.get('/', (req, res) => {
   res.send('Document Tracking System API is running!')
 })
